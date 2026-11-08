@@ -1,0 +1,492 @@
+{
+  "name": "Lumora Home — RAG Customer Support Agent",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "triggerOn": "specificFolder",
+        "folderToWatch": {
+          "__rl": true,
+          "value": "1Fq2_HpWCwzF2QYdniIUipxJ8NRTkHxS-",
+          "mode": "list",
+          "cachedResultName": "Lumora Home — E-commerce Knowledge Base",
+          "cachedResultUrl": "https://drive.google.com/drive/folders/1Fq2_HpWCwzF2QYdniIUipxJ8NRTkHxS-"
+        },
+        "event": "fileCreated",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDriveTrigger",
+      "typeVersion": 1,
+      "position": [
+        -1344,
+        592
+      ],
+      "id": "4e1b63f7-4b59-4e76-bdbc-54168b9fcdfa",
+      "name": "Google Drive Trigger",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "iCr6Wq9zz7bCG7Iz",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "value": "1tOKPFfJPFiZUodsjn1qqOkBl8_JQ2WAw",
+          "mode": "list",
+          "cachedResultName": "Lumora Home — E-commerce Knowledge Base.pdf",
+          "cachedResultUrl": "https://drive.google.com/file/d/1tOKPFfJPFiZUodsjn1qqOkBl8_JQ2WAw/view?usp=drivesdk"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        -1120,
+        592
+      ],
+      "id": "8b75e9ca-3330-42ea-88cc-f65de7db1df3",
+      "name": "Download file",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "iCr6Wq9zz7bCG7Iz",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "insert",
+        "pineconeIndex": {
+          "__rl": true,
+          "value": "lumorahomeecommerce",
+          "mode": "list",
+          "cachedResultName": "lumorahomeecommerce"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStorePinecone",
+      "typeVersion": 1.4,
+      "position": [
+        -864,
+        592
+      ],
+      "id": "9c36ad59-280d-4e32-bc7a-56a3d2190860",
+      "name": "Pinecone Vector Store",
+      "credentials": {
+        "pineconeApi": {
+          "id": "hmHiohInVmqjgqg5",
+          "name": "Pinecone account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "dataType": "binary",
+        "textSplittingMode": "custom",
+        "options": {
+          "metadata": {
+            "metadataValues": [
+              {
+                "name": "file-name",
+                "value": "={{ $('Download file').item.json.name }}"
+              }
+            ]
+          }
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.documentDefaultDataLoader",
+      "typeVersion": 1.1,
+      "position": [
+        -768,
+        832
+      ],
+      "id": "78a694d9-c6e2-4ded-a368-7812c198cc19",
+      "name": "Default Data Loader"
+    },
+    {
+      "parameters": {
+        "chunkSize": 500,
+        "chunkOverlap": 200,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.textSplitterRecursiveCharacterTextSplitter",
+      "typeVersion": 1,
+      "position": [
+        -688,
+        1040
+      ],
+      "id": "1a2cbff4-a6b9-4478-86de-f36981f13c36",
+      "name": "Recursive Character Text Splitter"
+    },
+    {
+      "parameters": {},
+      "type": "@n8n/n8n-nodes-langchain.embeddingsGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -896,
+        832
+      ],
+      "id": "2c4463d5-6019-4014-8b81-cfbef1fa8d1b",
+      "name": "Embeddings Google Gemini",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "2yVN0H9eVYoHU2qv",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $('Webhook').first().json.body.chatInput }}",
+        "options": {
+          "systemMessage": "You are Lumi, a friendly and helpful customer support assistant for Lumora Home — a Scandinavian-inspired home goods brand based in Austin, Texas.\n\nYour job is to answer customer questions accurately using only information retrieved from the Lumora Home knowledge base. \n\nRULES:\n1. Always use the Pinecone Vector Store tool to retrieve information before answering any question.\n2. Never make up product names, prices, SKUs, policies, or shipping details from memory.\n3. If the retrieved information does not contain an answer, say: \"I don't have that information available right now. Please contact our support team at hello@lumorahome.com or call +1 (512) 400-7820 (Mon–Fri, 9 AM – 6 PM CT).\"\n4. Keep responses concise, warm, and helpful.\n5. If a customer has an order issue (damaged item, wrong order, missing package), always ask for their order number and direct them to hello@lumorahome.com.\n6. Do not discuss competitors, offer opinions, or go outside the scope of Lumora Home support.\n\nAlways sign off responses as: Lumi | Lumora Home Support"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        -16,
+        576
+      ],
+      "id": "7f51953c-b129-4bdb-a92b-89eaf67f1595",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-3.5-flash-lite",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.2,
+      "position": [
+        -96,
+        816
+      ],
+      "id": "7f303917-c2e7-4f2f-8810-37cff628b4fd",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "4FdYDhNyAbRCXMrG",
+          "name": "Google Gemini(PaLM) Api account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "=lumora-demo-001"
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.4,
+      "position": [
+        64,
+        816
+      ],
+      "id": "8cc35b9c-6b58-4b91-b4e9-de9249590be1",
+      "name": "Simple Memory"
+    },
+    {
+      "parameters": {
+        "mode": "retrieve-as-tool",
+        "toolDescription": "Use this tool to answer any customer question about Lumora Home. Search it for:\n\nPRODUCTS: Sofas, accent chairs, benches, coffee tables, side tables, floor lamps, pendant lights, wall sconces, cookware sets, cast iron skillets, Dutch ovens, dinnerware, mugs, serving boards, kitchen textiles, duvet inserts, sheet sets, throw blankets, pillowcases, bath towels, robes, bath mats, soap dispensers, and bathroom shelves. Include SKUs, prices, dimensions, materials, and compatibility details.\n\nSHIPPING: Domestic rates (free over $75), expedited, overnight, White-Glove delivery for furniture, Canada and UK international shipping, processing times, tracking, and order delays.\n\nRETURNS & REFUNDS: 30-day return window, eligibility by category (furniture, lighting, cookware, bedding, bath), how to start a return, refund timelines, damaged or incorrect item procedures, international return rules.\n\nPAYMENTS: Accepted methods (Visa, Mastercard, Amex, PayPal, Apple Pay, Google Pay, Shop Pay), Shop Pay Installments via Affirm, gift cards, promo code rules, and payment security.\n\nPRODUCT CARE: Cleaning and maintenance instructions for upholstery, leather, wood, marble, cookware, and all textiles.\n\nLUMORA REWARDS: Point earning actions, redemption tiers (500–5,000 points), Moss/Stone/Oak membership tiers, birthday bonuses, referral points, and expiry rules.\n\nGENERAL: Warranty policy (1-year), fabric samples, sustainable sourcing, account management, password reset, and contact details.\n\nAlways retrieve from this tool before answering. Do not answer from memory.",
+        "pineconeIndex": {
+          "__rl": true,
+          "value": "lumorahomeecommerce",
+          "mode": "list",
+          "cachedResultName": "lumorahomeecommerce"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStorePinecone",
+      "typeVersion": 1.4,
+      "position": [
+        192,
+        816
+      ],
+      "id": "9176f3f5-eaad-4d84-9eb4-2f91cdb1c167",
+      "name": "Pinecone Vector Store1",
+      "credentials": {
+        "pineconeApi": {
+          "id": "hmHiohInVmqjgqg5",
+          "name": "Pinecone account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "@n8n/n8n-nodes-langchain.embeddingsGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        272,
+        1024
+      ],
+      "id": "1ddc1a6c-60ea-4310-8835-cb849c50a674",
+      "name": "Embeddings Google Gemini1",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "2yVN0H9eVYoHU2qv",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "0f59b8a3-6390-4ed8-a651-4a3342942814",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.2,
+      "position": [
+        -320,
+        576
+      ],
+      "id": "76e94341-f7e8-4ce7-84dd-11d77fcc62ff",
+      "name": "Webhook",
+      "webhookId": "0f59b8a3-6390-4ed8-a651-4a3342942814"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        592,
+        576
+      ],
+      "id": "09c628d3-5a8f-4028-ad99-cc90ce28c55a",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "content": "# INGESTION PIPELINE",
+        "height": 736,
+        "width": 1008,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -1472,
+        480
+      ],
+      "typeVersion": 1,
+      "id": "00babe2b-736d-441b-bf34-1dc2432b235e",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "# RAG SUPPORT AGENT",
+        "height": 720,
+        "width": 1168,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -368,
+        480
+      ],
+      "typeVersion": 1,
+      "id": "3427aef6-340f-457e-a69f-6233b97f62d8",
+      "name": "Sticky Note1"
+    }
+  ],
+  "pinData": {
+    "Webhook": [
+      {
+        "json": {
+          "headers": {
+            "host": "cebin99345.app.n8n.cloud",
+            "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Safari/537.36",
+            "content-length": "48",
+            "accept": "*/*",
+            "accept-encoding": "gzip, br",
+            "accept-language": "en-US,en;q=0.9,bn;q=0.8",
+            "cdn-loop": "cloudflare; loops=1; subreqs=1",
+            "cf-connecting-ip": "103.174.20.118",
+            "cf-ew-via": "15",
+            "cf-ipcountry": "BD",
+            "cf-ray": "a570e8964c3d2154-DAC",
+            "cf-visitor": "{\"scheme\":\"https\"}",
+            "cf-worker": "n8n.cloud",
+            "content-type": "application/json",
+            "origin": "null",
+            "priority": "u=1, i",
+            "sec-ch-ua": "\"Not:A-Brand\";v=\"8\", \"Chromium\";v=\"156\", \"Google Chrome\";v=\"156\"",
+            "sec-ch-ua-mobile": "?0",
+            "sec-ch-ua-platform": "\"Windows\"",
+            "sec-fetch-dest": "empty",
+            "sec-fetch-mode": "cors",
+            "sec-fetch-site": "cross-site",
+            "x-forwarded-for": "103.174.20.118, 172.71.92.136",
+            "x-forwarded-host": "cebin99345.app.n8n.cloud",
+            "x-forwarded-port": "443",
+            "x-forwarded-proto": "https",
+            "x-forwarded-server": "traefik-prod-users-gwc-21-7d7bc9c8dd-knmd9",
+            "x-is-trusted": "yes",
+            "x-real-ip": "103.174.20.118"
+          },
+          "params": {},
+          "query": {},
+          "body": {
+            "chatInput": "Hi",
+            "sessionId": "lumora-demo-001"
+          },
+          "webhookUrl": "https://cebin99345.app.n8n.cloud/webhook/0f59b8a3-6390-4ed8-a651-4a3342942814",
+          "executionMode": "production"
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Google Drive Trigger": {
+      "main": [
+        [
+          {
+            "node": "Download file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download file": {
+      "main": [
+        [
+          {
+            "node": "Pinecone Vector Store",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Default Data Loader": {
+      "ai_document": [
+        [
+          {
+            "node": "Pinecone Vector Store",
+            "type": "ai_document",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Recursive Character Text Splitter": {
+      "ai_textSplitter": [
+        [
+          {
+            "node": "Default Data Loader",
+            "type": "ai_textSplitter",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings Google Gemini": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Pinecone Vector Store",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pinecone Vector Store1": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings Google Gemini1": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Pinecone Vector Store1",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "8b72699f-12f8-4c5b-a62a-db3e8bac4ade",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "0b4c464bd30ffc0e1cfc46638c54d90aae96f20773fc2162ec29ba9f04b7a5c2"
+  },
+  "nodeGroups": [],
+  "id": "bqXDcuOYbGyDK4MS",
+  "tags": []
+}
